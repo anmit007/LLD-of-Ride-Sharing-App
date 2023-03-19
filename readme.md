@@ -45,4 +45,8 @@
 * The code should be legible, readable and DRY.
 * Database integration is not required
 
+## Additional Requirements:
+
+* Create an interface.
+
 
