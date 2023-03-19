@@ -41,21 +41,21 @@ class Rider: private Person
 {
 private:
     int id;
-    vector<Ride> allRides;
-    
+    vector<Ride> completedRides;
+    Ride currentRide;
 public:
     Rider(int, string);
     void createRide(int, int, int, int);
     void updateRide(int, int, int, int);
     void withdrawRide(int);
-    int closeRide(int);
+    int closeRide();
     int getId() const;
 };
 
 class System
 {
 private:
-    int drivers; 
+    int drivers;
     vector<Rider> riders;
 public:
     System(int, vector<Rider>&);
@@ -128,88 +128,145 @@ void Rider::createRide(int id, int origin, int dest, int seats)
         cout << "Wrong values of Origin and Destination provided. Can't create ride\n";
         return;
     }
-    Ride currentRide;
+
     currentRide.setId(id);
     currentRide.setOrigin(origin);
     currentRide.setDest(dest);
     currentRide.setSeats(seats);
     currentRide.setRideStatus(RideStatus::CREATED);
-    allRides.push_back(currentRide);
 }
 void Rider::updateRide(int id, int origin, int dest, int seats)
 {
-    auto it = allRides.rbegin();
-    for(; it!= allRides.rend();it++)
+    if (currentRide.getRideStatus() == RideStatus::WITHDRAWN)
     {
-        if(it->getId()==id)
-        {
-            break;
-        }
-    }
-    if(it->getRideStatus()!=RideStatus::CREATED)
-    {
-        cout << "Ride wasn't in progress, Can't update Ride\n";
+        cout << "Can't update ride. Ride was withdrawn\n";
         return;
     }
-    it->setOrigin(origin);
-    it->setDest(dest);
-    it->setSeats(seats);
+    if (currentRide.getRideStatus() == RideStatus::COMPLETED)
+    {
+        cout << "Can't update ride. Ride already complete\n";
+        return;
+    }
+
+    createRide(id, origin, dest, seats);
 }
 
 void Rider::withdrawRide(int id)
 {
-    auto it = allRides.rbegin();
-    for(; it!= allRides.rend();it++)
+    if (currentRide.getId() != id)
     {
-        if(it->getId()==id)
-        {
-            break;
-        }
-    }
-    if(it->getRideStatus()!=RideStatus::CREATED)
-    {
-        cout << "Ride wasn't in progress, Can't withdraw Ride\n";
+        cout << "Wrong ride Id as input. Can't withdraw current ride\n";
         return;
     }
-    it->setRideStatus(RideStatus::WITHDRAWN);
-    allRides.erase((it+1).base());
-    
+    if (currentRide.getRideStatus() != RideStatus::CREATED)
+    {
+        cout << "Ride wasn't in progress. Can't withdraw ride\n";
+        return;
+    }
+
+    currentRide.setRideStatus(RideStatus::WITHDRAWN);
 }
 
 int Rider::getId() const {
     return id;
 }
 
-int Rider::closeRide(int id)
+int Rider::closeRide()
 {
-    auto it = allRides.rbegin();
-    for(; it!= allRides.rend();it++)
+    if (currentRide.getRideStatus() != RideStatus::CREATED)
     {
-        if(it->getId()==id)
+        cout << "Ride wasn't in progress. Can't close ride\n";
+        return 0;
+    }
+
+    currentRide.setRideStatus(RideStatus::COMPLETED);
+    completedRides.push_back(currentRide);
+    return currentRide.calculateFare(completedRides.size() >= 10);
+}
+
+System::System(int drivers, vector<Rider>& riders)
+{
+    if(drivers < 2 || riders.size() < 2)
+    {
+        cout << "Not enough drivers or riders\n";
+    }
+
+    this->drivers = drivers;
+    this->riders = riders;
+}
+
+void System::createRide(int riderId, int rideId, int origin, int dest, int seats)
+{
+    if(drivers == 0)
+    {
+        cout << "No drivers around. Can't create ride\n";
+        return;
+    }
+
+    for(Rider &rider: riders)
+    {
+        if(rider.getId() == riderId)
         {
+            rider.createRide(rideId, origin, dest, seats);
+            drivers--;
             break;
         }
     }
-    if(it->getRideStatus()!=RideStatus::CREATED)
+}
+void System::updateRide(int riderId, int rideId, int origin, int dest, int seats)
+{
+    for(Rider &rider: riders)
     {
-        cout << "Ride wasn't in progress, Can't close Ride\n";
-        return 0;
+        if(rider.getId() == riderId)
+        {
+            rider.updateRide(rideId, origin, dest, seats);
+            break;
+        }
     }
-    it->setRideStatus(RideStatus::COMPLETED);
-    return it->calculateFare(allRides.size()>=10);
+}
+void System::withdrawRide(int riderId, int rideId)
+{
+    for(Rider &rider: riders)
+    {
+        if(rider.getId() == riderId)
+        {
+            rider.withdrawRide(rideId);
+            drivers++;
+            break;
+        }
+    }
+}
+int System::closeRide(int riderId)
+{
+    for(Rider &rider: riders)
+    {
+        if(rider.getId() == riderId)
+        {
+            drivers++;
+            return rider.closeRide();
+        }
+    }
+    return 0;
 }
 
+int main() {
+    Rider rider(1, "Lucifer");
+    Driver driver("Amenadiel");
+    Rider rider1(2, "Chloe");
+    Rider rider2(3, "Maze");
 
+    vector<Rider> riders;
+    riders.push_back(rider);
+    riders.push_back(rider1);
+    riders.push_back(rider2);
+    System system(3, riders);
 
-int main()
-{
+    rider.createRide(1, 50, 60, 1);
+    cout << rider.closeRide() << endl;
+    rider.updateRide(1, 50, 60, 2);
+    cout << rider.closeRide() << endl;
 
-Rider rider(1,"Anmit");
-Driver driver("Batman");
-rider.createRide(1,50,60,1);
-rider.createRide(2,40,60,2);
-cout << rider.closeRide(1) << endl;  
-cout << rider.closeRide(2) << endl; 
+ 
 }
 
 
